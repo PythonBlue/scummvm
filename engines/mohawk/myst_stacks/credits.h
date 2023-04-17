@@ -49,6 +49,9 @@ private:
 	DECLARE_OPCODE(o_runCredits);
 
 	bool _creditsRunning;
+    
+    //for some reason, newer versions of ScummVM do not like transitioning from the options menu to credits, so we need to have a second credits running boolean so that the first can be changed after the stack is switched to
+    bool _creditsEnded;
 	uint16 _curImage; // 56
 };
 

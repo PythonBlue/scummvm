@@ -45,15 +45,22 @@ public:
 
 	void copyImageSectionToScreen(uint16 image, Common::Rect src, Common::Rect dest);
 	void copyImageSectionToBackBuffer(uint16 image, Common::Rect src, Common::Rect dest);
+	void copyImageSectionToBackBuffer2(uint16 image, Common::Rect src, Common::Rect dest);
 	void copyImageToScreen(uint16 image, Common::Rect dest);
 	void copyImageToBackBuffer(uint16 image, Common::Rect dest);
+	void copyImageToBackBuffer2(uint16 image, Common::Rect dest);
 	void copyBackBufferToScreen(Common::Rect r);
+	void copyBackBuffer2ToScreen(Common::Rect r);
 	void runTransition(TransitionType type, Common::Rect rect, uint16 steps, uint16 delay);
 	void drawRect(Common::Rect rect, RectState state);
 	void drawLine(const Common::Point &p1, const Common::Point &p2, uint32 color);
 	void fadeToBlack();
 	void fadeFromBlack();
 	void clearScreen();
+	void clearBackBuffer()
+	{
+		_backBuffer->fillRect(Common::Rect(544, 332), 0);
+	};
 
 	void clearScreenPalette();
 	void setPaletteToScreen();
@@ -78,6 +85,7 @@ private:
 	MystBitmap *_bmpDecoder;
 
 	Graphics::Surface *_backBuffer;
+	Graphics::Surface *_backBuffer2;
 	Graphics::PixelFormat _pixelFormat;
 	Common::Rect _viewport;
 	byte _palette[256 * 3];
@@ -93,6 +101,14 @@ private:
 	void transitionSlideToBottom(Common::Rect rect, uint16 steps, uint16 delay);
 	void transitionPartialToRight(Common::Rect rect, uint32 width, uint32 steps);
 	void transitionPartialToLeft(Common::Rect rect, uint32 width, uint32 steps);
+	void transitionScrollToTop(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionScrollToLeft(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionScrollToRight(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionScrollToBottom(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionPushToTop(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionPushToLeft(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionPushToRight(Common::Rect rect, uint16 steps, uint16 delay);
+    void transitionPushToBottom(Common::Rect rect, uint16 steps, uint16 delay);
 
 	void remapSurfaceToSystemPalette(MohawkSurface *mhkSurface);
 	byte getColorIndex(const byte *palette, byte red, byte green, byte blue);

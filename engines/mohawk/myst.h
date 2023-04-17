@@ -48,6 +48,7 @@ class MystArea;
 class MystAreaImageSwitch;
 class MystAreaHover;
 class MystCard;
+class MystFixes;
 
 // Engine Debug Flags
 enum {
@@ -94,7 +95,16 @@ enum TransitionType {
 	kTransitionPartToRight	= 9,
 	kTransitionPartToLeft	= 10,
 	kTransitionCopy			= 11,
-	kNoTransition			= 999
+	kNoTransition			= 999,
+//Additional transitions that make use of the second backbuffer
+	kTransitionScrollToLeft    = 1000,
+	kTransitionScrollToRight    = 1001,
+	kTransitionScrollToTop    = 1002,
+	kTransitionScrollToBottom    = 1003,
+	kTransitionPushToLeft    = 1004,
+	kTransitionPushToRight    = 1005,
+	kTransitionPushToTop    = 1006,
+	kTransitionPushToBottom    = 1007
 };
 
 struct MystCondition {
@@ -143,6 +153,7 @@ public:
 	MystCard *getCard() { return _card.get(); };
 	MystCardPtr getCardPtr() { return _card; };
 	void setMainCursor(uint16 cursor);
+    	void setMainCursorAnimated(uint16 cursor, uint16 oldCursor);
 	uint16 getMainCursor() { return _mainCursor; }
 	void refreshCursor();
 	bool wait(uint32 duration, bool skippable = false);
@@ -162,6 +173,8 @@ public:
 	MystGameState *_gameState;
 	MystScriptParserPtr _stack;
 	Common::RandomSource *_rnd;
+    
+	MystFixes *_fixes;
 
 	MystArea *loadResource(Common::SeekableReadStream *rlstStream, MystArea *parent);
 	void redrawResource(MystAreaImageSwitch *resource, bool update = true);
@@ -212,6 +225,17 @@ public:
 
 	static const MystLanguage *getLanguageDesc(Common::Language language);
 	Common::Language getLanguage() const override;
+    
+    void dropPageAnim(uint16 page);
+    void dropPage();
+	void setSoundFade(uint16 val, Audio::SoundHandle theHandle, uint16 theVol)
+	{
+		_soundFade = val;
+		_soundHandle = theHandle;
+		_soundVol = theVol;
+		_fadeTotal = 0;
+    };
+    bool _escapePressed;
 
 private:
 	ResourceCache _cache;
@@ -226,8 +250,6 @@ private:
 
 	void goToMainMenu();
 
-	void dropPage();
-
 	Common::String wrapMovieFilename(const Common::String &movieName, uint16 stack);
 
 	void loadStackArchives(MystStack stackId);
@@ -236,8 +258,12 @@ private:
 	// Input
 	bool _mouseClicked;
 	bool _mouseMoved;
-	bool _escapePressed;
 	bool _waitingOnBlockingOperation;
+    	bool waitToResume;
+	uint16 _soundFade;
+	uint16 _soundVol;
+	Audio::SoundHandle _soundHandle;
+	uint16 _fadeTotal;
 
 	uint16 _currentCursor;
 	uint16 _mainCursor; // Also defines the current page being held (white, blue, red, or none)

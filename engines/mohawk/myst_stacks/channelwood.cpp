@@ -340,10 +340,22 @@ void Channelwood::o_drawImageChangeCardAndVolume(uint16 var, const ArgumentsArra
 	debugC(kDebugScript, "\timageId: %d", imageId);
 	debugC(kDebugScript, "\tcardId: %d", cardId);
 
-	_vm->_gfx->copyImageToScreen(imageId, Common::Rect(0, 0, 544, 333));
-	_vm->wait(200);
+		//_vm->_gfx->copyImageToScreen(imageId, Common::Rect(0, 0, 544, 333));
+        _vm->_gfx->copyImageToBackBuffer(imageId, Common::Rect(0, 0, 544, 333));
+        if (ConfMan.getBool("transition_mode"))
+        {
+            _vm->_gfx->runTransition(kTransitionDissolve, Common::Rect(0, 0, 544, 333), 20, 50);
+            _vm->wait(100);
+            _vm->changeToCard(cardId, kTransitionScrollToLeft);
+        }
+		else
+        {
+            _vm->changeToCard(cardId, kTransitionCopy);
+            _vm->wait(100);
+            _vm->_gfx->runTransition(kTransitionCopy, Common::Rect(0, 0, 544, 333), 0, 0);
+        }
+            
 
-	_vm->changeToCard(cardId, kTransitionPartToLeft);
 
 	if (volume) {
 		_vm->_sound->changeBackgroundVolume(volume);
@@ -454,6 +466,7 @@ void Channelwood::o_pumpLeverMove(uint16 var, const ArgumentsArray &args) {
 void Channelwood::o_pumpLeverEndMove(uint16 var, const ArgumentsArray &args) {
 	o_leverEndMove(var, args);
 
+	_vm->_sound->stopEffect();
 	MystVideoInfo *lever = getInvokingResource<MystVideoInfo>();
 	uint16 soundId = lever->getList3(0);
 	if (soundId)

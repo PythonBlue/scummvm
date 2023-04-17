@@ -438,8 +438,14 @@ void MystCard::setResourceEnabled(uint16 resourceIndex, bool enable) {
 
 void MystCard::drawResourceImages() {
 	for (uint16 i = 0; i < _resources.size(); i++)
+    {
+        if (_vm->_stack->getStackId() == kMystStack && _vm->getCard()->getId() == 4319)
+        {
+            return;
+        }
 		if (_resources[i]->isDrawSubimages())
 			_resources[i]->drawDataToScreen();
+    }
 }
 
 void MystCard::redrawArea(uint16 var, bool updateScreen) {

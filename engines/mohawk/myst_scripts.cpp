@@ -26,12 +26,14 @@
 #include "mohawk/myst_graphics.h"
 #include "mohawk/myst_scripts.h"
 #include "mohawk/myst_sound.h"
+#include "mohawk/myst_fixes.h"
 #include "mohawk/video.h"
 
 #include "common/debug-channels.h"
 #include "common/system.h"
 #include "common/memstream.h"
 #include "common/textconsole.h"
+#include "common/config-manager.h"
 
 namespace Mohawk {
 
@@ -294,8 +296,30 @@ void MystScriptParser::animatedUpdate(const ArgumentsArray &args, uint16 delay) 
 
 	while (argsRead < args.size()) {
 		Common::Rect rect = Common::Rect(args[argsRead], args[argsRead + 1], args[argsRead + 2], args[argsRead + 3]);
-		TransitionType kind = static_cast<TransitionType>(args[argsRead + 4]);
-		uint16 steps = args[argsRead + 5];
+        
+		TransitionType kind = _vm->_fixes->TransitionFix(static_cast<TransitionType>(args[argsRead + 4]), _stackId, _vm->getCard()->getId(), 0, _vm->_system->getEventManager()->getMousePos());
+        if ((_vm->getCard()->getId() == 4705 || _vm->getCard()->getId() == 4707 || _vm->getCard()->getId() == 4709))
+        {
+            rect = Common::Rect(215,129,349,248);
+            if (kind == kTransitionBottomToTop)
+                kind = kTransitionPushToTop;
+            else
+                kind = kTransitionSlideToBottom;
+        }
+        
+        if (_vm->getCard()->getId() == 6120 && rect.right == 340)
+        {
+            rect = Common::Rect(229,45,305,333);
+            kind = kTransitionSlideToRight;
+        }
+		uint16 steps = _vm->_fixes->stepFix(args[argsRead + 5], _stackId, _vm->getCard()->getId(), 0, kind, true);
+        
+        if (_vm->getCard()->getId() == 6156 && rect.right == 340)
+        {
+            rect = Common::Rect(229,45,305,333);
+            kind = kTransitionPushToLeft;
+            steps = 40;
+        }
 
 		debugC(kDebugScript, "\trect.left: %d", rect.left);
 		debugC(kDebugScript, "\trect.top: %d", rect.top);
@@ -306,6 +330,11 @@ void MystScriptParser::animatedUpdate(const ArgumentsArray &args, uint16 delay) 
 		debugC(kDebugScript, "\tsteps: %d", steps);
 
 		_vm->_gfx->runTransition(kind, rect, steps, delay);
+        
+        if (_vm->getCard()->getId() == 4709 && kind == kTransitionSlideToBottom)
+        {
+            _vm->wait(500);
+        }
 
 		argsRead += 6;
 	}
@@ -383,7 +412,9 @@ void MystScriptParser::o_takePage(uint16 var, const ArgumentsArray &args) {
 	// Take / drop page
 	toggleVar(var);
 
-	if (oldPage != _globals.heldPage) {
+	if (oldPage > 0 && oldPage != _globals.heldPage) {
+        	_vm->dropPageAnim(oldPage);
+    		}
 		_vm->_cursor->hideCursor();
 		_vm->getCard()->redrawArea(var);
 
@@ -394,7 +425,6 @@ void MystScriptParser::o_takePage(uint16 var, const ArgumentsArray &args) {
 			_vm->setMainCursor(kDefaultMystCursor);
 
 		_vm->_cursor->showCursor();
-	}
 }
 
 void MystScriptParser::o_redrawCard(uint16 var, const ArgumentsArray &args) {
@@ -419,21 +449,21 @@ void MystScriptParser::o_goToDestForward(uint16 var, const ArgumentsArray &args)
 
 void MystScriptParser::o_goToDestRight(uint16 var, const ArgumentsArray &args) {
 	if (_invokingResource != nullptr)
-		_vm->changeToCard(_invokingResource->getDest(), kTransitionPartToRight);
+		_vm->changeToCard(_invokingResource->getDest(), kTransitionScrollToLeft);
 	else
 		warning("Opcode o_goToDestRight: Missing invokingResource");
 }
 
 void MystScriptParser::o_goToDestLeft(uint16 var, const ArgumentsArray &args) {
 	if (_invokingResource != nullptr)
-		_vm->changeToCard(_invokingResource->getDest(), kTransitionPartToLeft);
+		_vm->changeToCard(_invokingResource->getDest(), kTransitionScrollToRight);
 	else
 		warning("Opcode o_goToDestLeft: Missing invokingResource");
 }
 
 void MystScriptParser::o_goToDestUp(uint16 var, const ArgumentsArray &args) {
 	if (_invokingResource != nullptr)
-		_vm->changeToCard(_invokingResource->getDest(), kTransitionTopToBottom);
+		_vm->changeToCard(_invokingResource->getDest(), kTransitionScrollToBottom);
 	else
 		warning("Opcode o_goToDestUp: Missing invokingResource");
 }
@@ -468,12 +498,12 @@ void MystScriptParser::o_redrawAreaForVar(uint16 var, const ArgumentsArray &args
 }
 
 void MystScriptParser::o_changeCardDirectional(uint16 var, const ArgumentsArray &args) {
-
+        
 	// Used by Channelwood Card 3262 (In Elevator)
 	uint16 cardId = args[0];
 	uint16 directionalUpdateDataSize = args[1];
 
-	_vm->changeToCard(cardId, kNoTransition);
+    _vm->changeToCard(cardId, kTransitionScrollToLeft);
 
 	animatedUpdate(ArgumentsArray(args.begin() + 2, directionalUpdateDataSize), 0);
 }
@@ -568,19 +598,44 @@ void MystScriptParser::o_playSound(uint16 var, const ArgumentsArray &args) {
 	if (soundId == 4197) {
 		soundId = 4191;
 	}
+    if (_vm->_stack->getStackId() == kMystStack)
+    {
+        if (_vm->getCard()->getId() == 4697 ||
+            _vm->getCard()->getId() == 4704)
+        {
+            _vm->_sound->resumeBackground();
+            return;
+        }
+    }
+    _vm->_sound->playEffect(soundId);
+    if ((_vm->getCard()->getId() == 6151 || _vm->getCard()->getId() == 6155 || _vm->getCard()->getId() == 6156 || _vm->getCard()->getId() == 6338 || _vm->getCard()->getId() == 6339) && soundId == 10119)
+    {
+        _vm->playSoundBlocking(11119);
+    }
 
-	_vm->_sound->playEffect(soundId);
 }
 
 void MystScriptParser::o_stopSoundBackground(uint16 var, const ArgumentsArray &args) {
-	_vm->_sound->stopBackground();
+    if (_vm->_stack->getStackId() == kMystStack)
+    {
+        if (_vm->getCard()->getId() == 4698 ||
+            _vm->getCard()->getId() == 4701 ||
+            _vm->getCard()->getId() == 4702)
+            _vm->_sound->pauseBackground();
+    }
+    _vm->_sound->stopBackground();
 }
 
 void MystScriptParser::o_playSoundBlocking(uint16 var, const ArgumentsArray &args) {
 	uint16 soundId = args[0];
-
 	_vm->_sound->stopEffect();
-	_vm->playSoundBlocking(soundId);
+    if (soundId == 5103)
+    {
+        _vm->_sound->playEffect(5097);
+        _vm->wait(300);
+    }
+    else
+        _vm->playSoundBlocking(soundId);
 }
 
 void MystScriptParser::o_copyBackBufferToScreen(uint16 var, const ArgumentsArray &args) {
@@ -597,6 +652,31 @@ void MystScriptParser::o_copyBackBufferToScreen(uint16 var, const ArgumentsArray
 	debugC(kDebugScript, "\trect.top: %d", rect.top);
 	debugC(kDebugScript, "\trect.right: %d", rect.right);
 	debugC(kDebugScript, "\trect.bottom: %d", rect.bottom);
+
+    switch (_vm->getCard()->getId())
+    {
+        case 6156:
+        {
+            _vm->_gfx->runTransition(kTransitionCopy, rect, 20, 0);
+            _vm->wait(100);
+            break;
+        }
+        case 6157:
+        case 6158:
+        case 6172:
+        case 7178:
+        {
+            if (ConfMan.getBool("transition_mode"))
+            {
+                _vm->_gfx->runTransition(kTransitionDissolve, rect, 20, 0);
+                _vm->wait(100);
+                return;
+            }
+            break;
+        }
+        default:
+            break;
+    }
 
 	_vm->_gfx->copyBackBufferToScreen(rect);
 
@@ -615,7 +695,11 @@ void MystScriptParser::o_copyImageToBackBuffer(uint16 var, const ArgumentsArray 
 
 	// WORKAROUND wrong image id in mechanical staircase
 	if (imageId == 7158)
+    {
 		imageId = 7178;
+    }
+    
+    drawId = imageId;
 
 	Common::Rect srcRect = Common::Rect(args[1], args[2], args[3], args[4]);
 
@@ -653,6 +737,44 @@ void MystScriptParser::o_copyImageToBackBuffer(uint16 var, const ArgumentsArray 
 	if (_vm->getCard()->getId() == 6009) {
 		_vm->wait(100);
 	}
+    if (imageId == 6158 || imageId == 6264)
+    {
+        _vm->_gfx->runTransition(kTransitionDissolve, Common::Rect(544,333), 20, 0);
+    }
+    if (imageId == 6158)
+        _vm->wait(100);
+    if (_vm->getCard()->getId() == 4710 && ConfMan.getBool("transition_mode"))
+    {
+        _vm->_gfx->runTransition(kTransitionDissolve, Common::Rect(544,333), 20, 0);
+    }
+    
+    switch (drawId)
+    {
+        case 3334:
+        {
+            _vm->_gfx->runTransition(kTransitionDissolve, dstRect, 20, 0);
+            break;
+        }
+        case 6121:
+        case 6334:
+        case 6337:
+            if (ConfMan.getBool("transition_mode"))
+            {
+                _vm->_gfx->runTransition(kTransitionDissolve, dstRect, 20, 0);
+                //_vm->wait(100);
+                return;
+            }
+            break;
+        case 6335:
+            if (_vm->_system->getEventManager()->getMousePos().x < 272)
+                _vm->_gfx->runTransition(kTransitionScrollToRight, dstRect, 20, 0);
+            else
+                _vm->_gfx->runTransition(kTransitionScrollToLeft, dstRect, 20, 0);
+            return;
+        default:
+            break;
+        
+    }
 }
 
 void MystScriptParser::o_changeBackgroundSound(uint16 var, const ArgumentsArray &args) {
@@ -709,8 +831,17 @@ void MystScriptParser::o_copyImageToScreen(uint16 var, const ArgumentsArray &arg
 	debugC(kDebugScript, "\tdstRect.top: %d", dstRect.top);
 	debugC(kDebugScript, "\tdstRect.right: %d", dstRect.right);
 	debugC(kDebugScript, "\tdstRect.bottom: %d", dstRect.bottom);
-
+        
 	_vm->_gfx->copyImageSectionToScreen(imageId, srcRect, dstRect);
+    
+    switch(imageId)
+    {
+        case 6328:
+            soundWaitStop();
+            break;
+        default:
+            break;
+    }
 }
 
 void MystScriptParser::o_changeCard(uint16 var, const ArgumentsArray &args) {
@@ -725,8 +856,19 @@ void MystScriptParser::o_drawImageChangeCard(uint16 var, const ArgumentsArray &a
 		uint16 cardId = args[1];
 		TransitionType transition = static_cast<TransitionType>(args[2]);
 
-		_vm->_gfx->copyImageToScreen(imageId, Common::Rect(0, 0, 544, 333));
-		_vm->wait(200);
+		//_vm->_gfx->copyImageToScreen(imageId, Common::Rect(0, 0, 544, 333));
+        _vm->_gfx->copyImageToBackBuffer(imageId, Common::Rect(0, 0, 544, 333));
+        if (ConfMan.getBool("transition_mode"))
+        {
+            if (_vm->getCard()->getId() == 4103)
+                _vm->_gfx->runTransition(kTransitionRightToLeft, Common::Rect(0, 0, 544, 333), 20, 0);
+            else
+                _vm->_gfx->runTransition(kTransitionDissolve, Common::Rect(0, 0, 544, 333), 20, 0);
+        }
+		else
+            _vm->_gfx->runTransition(kTransitionCopy, Common::Rect(0, 0, 544, 333), 0, 0);
+            
+        _vm->wait(200);
 
 		_vm->changeToCard(cardId, transition);
 }
@@ -749,6 +891,19 @@ void MystScriptParser::o_showCursor(uint16 var, const ArgumentsArray &args) {
 void MystScriptParser::o_delay(uint16 var, const ArgumentsArray &args) {
 	// Used on Mechanical Card 6327 (Elevator)
 	uint16 time = args[0];
+    
+    if (_vm->getCard()->getId() == 6156 && time > 500)
+    {
+        soundWaitStop();
+        _vm->wait(50);
+        _vm->_sound->playEffect(12156);
+        soundWaitStop();
+        _vm->wait(50);
+        _vm->_sound->playEffect(12156);
+        soundWaitStop();
+        _vm->wait(50);
+        return;
+    }
 
 	_vm->wait(time);
 }
@@ -784,13 +939,78 @@ void MystScriptParser::o_changeCardPlaySoundDirectional(uint16 var, const Argume
 	debugC(kDebugScript, "\tsound: %d", soundId);
 	debugC(kDebugScript, "\tdelay between steps: %d", delayBetweenSteps);
 	debugC(kDebugScript, "\tanimated update data size: %d", dataSize);
-
+    
+    bool soundDelay = true;
+    
+    if (_vm->_stack->getStackId() == kMystStack)
+    {
+        switch (cardId)
+        {
+            case 4159:
+            case 4160:
+            case 4161:
+            case 4162:
+            {
+                soundDelay = false;
+                break;
+            }
+            case 4709:
+            {
+                _vm->playSoundBlocking(4710);
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    if (_vm->_stack->getStackId() == kMechanicalStack)
+    {
+        switch (cardId)
+        {
+            case 6120:
+            case 6330:
+            {
+                soundDelay = false;
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+    
+    if (soundDelay == false && soundId)
+        _vm->_sound->playEffect(soundId);
+        
 	_vm->changeToCard(cardId, kNoTransition);
-
-	if (soundId)
-		_vm->_sound->playEffect(soundId);
+    if (soundDelay == true && soundId)
+        _vm->_sound->playEffect(soundId);
 
 	animatedUpdate(ArgumentsArray(args.begin() + 4, dataSize), delayBetweenSteps);
+    //while (_vm->_sound->isEffectPlaying() && !_vm->shouldQuit()) {
+        //_vm->doFrame();
+    //}
+    if (_vm->_stack->getStackId() == kMystStack)
+        {
+            switch (cardId)
+            {
+                case 4319:
+                {
+                    soundWaitStop();
+                    break;
+                }
+                case 4709:
+                {
+                    _vm->_sound->stopEffect();
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
 }
 
 void MystScriptParser::o_directionalUpdatePlaySound(uint16 var, const ArgumentsArray &args) {
@@ -802,10 +1022,42 @@ void MystScriptParser::o_directionalUpdatePlaySound(uint16 var, const ArgumentsA
 	debugC(kDebugScript, "\tdelay between steps: %d", delayBetweenSteps);
 	debugC(kDebugScript, "\tanimated update data size: %d", dataSize);
 
+    
 	if (soundId)
+        if (soundId == 12117)
+        {
+            _vm->playSoundBlocking(11119);
+            _vm->_sound->playEffect(soundId);
+        }
 		_vm->_sound->playEffect(soundId);
 
 	animatedUpdate(ArgumentsArray(args.begin() + 3, dataSize), delayBetweenSteps);
+    if (_vm->getCard()->getId() == 6119 && soundId == 12119)
+        _vm->_sound->stopEffect();
+    if (_vm->_stack->getStackId() == kMystStack)
+        {
+            switch (_vm->getCard()->getId())
+            {
+                case 4159:
+                case 4160:
+                case 4161:
+                case 4162:
+                {
+                    soundWaitStop();
+                    break;
+                }
+                case 4705:
+                case 4709:
+                {
+                    _vm->_sound->stopEffect();
+                    break;
+                }
+                default:
+                {
+                    break;
+                }
+            }
+        }
 }
 
 void MystScriptParser::o_saveMainCursor(uint16 var, const ArgumentsArray &args) {

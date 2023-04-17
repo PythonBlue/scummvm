@@ -78,3 +78,16 @@ A massive thank you to the entire team for making the ScummVM project possible. 
 > Good Luck and Happy Adventuring\!
 > The ScummVM team.
 > <https://www.scummvm.org/>
+
+## Addendum from Python Blue
+
+This fork addresses several problems with the ScummVM implementation of Myst specifically. While crude at times, the brief list of changes is below:
+
+- Fixed most if not all of the transitions
+- Reimplemented animated cursors, which were used when dropping a page
+- minor positioning fixes for images and videos
+- A few fixes for sound bugs that usually stem from attempts to play multiple at once instead of sequentially like originally
+- Myst Island flyby movie in the intro plays the way it was originally conceived (audio only for a few seconds, then plays everything)
+- Credits scroll like in the original Mac HyperCard stack
+
+This mod is best experienced with the game data archives edited to have the original Mac assets, which cannot be publicly included for copyright reasons, but the unmodified Myst Masterpiece data will work well with it as well.

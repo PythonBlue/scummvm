@@ -59,6 +59,11 @@ void CursorManager::setCursor(uint16 id) {
 	// For the base class, just use the default cursor always
 	setDefaultCursor();
 }
+    
+void CursorManager::setCursorAnimated(uint16 idNew, uint16 idOld) {
+        // For the base class, just use the default cursor always
+        setDefaultCursor();
+}
 
 void CursorManager::setMacCursor(Common::SeekableReadStream *stream) {
 	assert(stream);
@@ -133,6 +138,96 @@ void MystCursorManager::setCursor(uint16 id) {
 		CursorMan.replaceCursor(surface->getPixels(), surface->w, surface->h, hotspotX, hotspotY, pixelFormat.RGBToColor(255, 255, 255), false, &pixelFormat);
 	}
 }
+
+
+    
+    void MystCursorManager::setCursorAnimated(uint16 idNew, uint16 idOld) {
+        // Zero means empty cursor
+        if (idNew == 0) {
+            static const byte emptyCursor[4] = { 0, 0, 0, 0 };
+            CursorMan.replaceCursor(&emptyCursor, 2, 2, 0, 0, 0);
+            return;
+        }
+        Common::SeekableReadStream *clrcStream = _vm->getResource(ID_CLRC, idNew);
+        uint16 hotspotX = clrcStream->readUint16LE();
+        uint16 hotspotY = clrcStream->readUint16LE();
+        delete clrcStream;
+        
+        // Both Myst and Myst ME use the "MystBitmap" format for cursor images.
+        MohawkSurface *mhkSurface = _vm->_gfx->findImage(idNew);
+        Graphics::Surface *surface = mhkSurface->getSurface();
+        
+        // Myst ME stores some cursors as 24bpp images instead of 8bpp
+        if (surface->format.bytesPerPixel == 1) {
+            // The transparent color is almost always 255, except for the main cursor (100)
+            // in the D'ni archive, where it is 0.
+            // Using the color of the first pixel as the transparent color for the main cursor always works.
+            byte transparentColor;
+            if (idNew == kDefaultMystCursor) {
+                transparentColor = ((byte *)surface->getPixels())[0];
+            } else {
+                transparentColor = 255;
+            }
+            //_vm->_sound->playEffect(800);
+            MohawkSurface *mhkSurface2 = _vm->_gfx->findImage(idOld + 3);
+            int16 frameCountX = 0;
+            int16 frameCountY = 0;
+            while (frameCountX < 48)
+            {
+                mhkSurface2->setOffsetX((35 * frameCountX) - 1);
+                mhkSurface2->setOffsetY((38 * frameCountY) - 1);
+                Graphics::Surface *surface2 = mhkSurface2->getSurface();
+                CursorMan.replaceCursor(surface2->getPixels(), 35, 38, hotspotX, hotspotY, transparentColor);
+                if (frameCountX % 6 == 5)
+                    frameCountY++;
+                frameCountX++;
+                _vm->wait(25);
+            }
+            CursorMan.replaceCursor(surface->getPixels(), surface->w, surface->h, hotspotX, hotspotY, transparentColor);
+            
+            // We're using the screen palette for the original game, but we need
+            // to use this for any 8bpp cursor in ME.
+            if (_vm->getFeatures() & GF_ME)
+                CursorMan.replaceCursorPalette(mhkSurface->getPalette(), 0, 256);
+        } else {
+            Graphics::PixelFormat pixelFormat = g_system->getScreenFormat();
+            //_vm->_sound->playEffect(800);
+            MohawkSurface *mhkSurface2 = _vm->_gfx->findImage(idOld + 3);
+            Graphics::Surface *surface2 = mhkSurface2->getSurface();
+            Graphics::Surface frame;
+            frame.create(35, 38, pixelFormat);
+            
+            int16 frameCount = 0;
+            int16 frameCountX = 0;
+            int16 frameCountY = 0;
+            while (frameCount < 48)
+            {
+                for (int x = 0; x < 35; x++)
+                {
+                    for (int y = 0; y < 38; y++)
+                    {
+                        const uint32 *src = (const uint32 *)surface2->getBasePtr(x + (35 * frameCountX), y + (38 * frameCountY));
+                        uint32 *dst = (uint32 *)frame.getBasePtr(x, y);
+                        uint8 a, r, g, b;
+                        pixelFormat.colorToARGB(*src++, a, r, g, b);
+                        *dst++ = (uint32) pixelFormat.ARGBToColor(a, r, g, b);
+                        //Graphics::colorToARGB< Graphics::ColorMasks<8888> >(*src++, a, r, g, b);
+                        //*dst++ = (uint32) Graphics::ARGBToColor< Graphics::ColorMasks<8888> >(a, r, g, b);
+                    }
+                }
+                CursorMan.replaceCursor(frame.getPixels(), frame.w, frame.h, hotspotX + 9, hotspotY + 10, pixelFormat.RGBToColor(255, 255, 255), false, &pixelFormat);
+                _vm->wait(25);
+                frameCount++;
+                frameCountX++;
+                if (frameCountX % 6 == 0)
+                {
+                    frameCountX = 0;
+                    frameCountY++;
+                }
+            }
+            CursorMan.replaceCursor(surface->getPixels(), surface->w, surface->h, hotspotX, hotspotY, pixelFormat.RGBToColor(255, 255, 255), false, &pixelFormat);
+        }
+    }
 
 void MystCursorManager::setDefaultCursor() {
 	setCursor(kDefaultMystCursor);

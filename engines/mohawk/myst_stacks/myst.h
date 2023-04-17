@@ -363,6 +363,7 @@ protected:
 	void observatoryUpdateDay();
 	void observatoryUpdateYear();
 	void observatoryUpdateTime();
+    //uint32 EEWait;
 };
 
 } // End of namespace MystStacks

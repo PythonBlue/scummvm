@@ -98,6 +98,7 @@ public:
 	MystAreaAction(MohawkEngine_Myst *vm, ResourceType type, Common::SeekableReadStream *rlstStream, MystArea *parent);
 
 	void handleMouseUp() override;
+    void handleMouseDown() override;
 	const Common::String describe() override;
 
 protected:

@@ -37,13 +37,13 @@
 
 namespace Mohawk {
 
-VideoEntry::VideoEntry() : _video(nullptr), _id(-1), _x(0), _y(0), _loop(false), _enabled(true) {
+VideoEntry::VideoEntry() : _video(nullptr), _id(-1), _x(0), _y(0), _loop(false), _enabled(true), _visible(true) {
 }
 
-VideoEntry::VideoEntry(Video::VideoDecoder *video, const Common::String &fileName) : _video(video), _fileName(fileName), _id(-1), _x(0), _y(0), _loop(false), _enabled(true) {
+VideoEntry::VideoEntry(Video::VideoDecoder *video, const Common::String &fileName) : _video(video), _fileName(fileName), _id(-1), _x(0), _y(0), _loop(false), _enabled(true), _visible(true) {
 }
 
-VideoEntry::VideoEntry(Video::VideoDecoder *video, int id) : _video(video), _id(id), _x(0), _y(0), _loop(false), _enabled(true) {
+VideoEntry::VideoEntry(Video::VideoDecoder *video, int id) : _video(video), _id(id), _x(0), _y(0), _loop(false), _enabled(true), _visible(true) {
 }
 
 VideoEntry::~VideoEntry() {
@@ -260,7 +260,7 @@ bool VideoManager::drawNextFrame(VideoEntryPtr videoEntry) {
 	Video::VideoDecoder *video = videoEntry->_video;
 	const Graphics::Surface *frame = video->decodeNextFrame();
 
-	if (!frame || !videoEntry->isEnabled()) {
+	if (!frame || !videoEntry->isEnabled() || !videoEntry->getVisible()) {
 		return false;
 	}
 

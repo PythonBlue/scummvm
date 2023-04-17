@@ -38,6 +38,7 @@ namespace MystStacks {
 Credits::Credits(MohawkEngine_Myst *vm) :
 		MystScriptParser(vm, kCreditsStack),
 		_creditsRunning(false),
+        	_creditsEnded(false),
 		_curImage(0) {
 	setupOpcodes();
 }
@@ -55,24 +56,34 @@ void Credits::setupOpcodes() {
 
 void Credits::disablePersistentScripts() {
 	_creditsRunning = false;
+    	_creditsEnded = true;
 }
 
 void Credits::runPersistentScripts() {
-	if (!_creditsRunning)
+	if (!_creditsRunning && !_creditsEnded){
+		_creditsRunning = true;
+		_vm->getCard()->drawBackground();
+        	_vm->_gfx->runTransition(kTransitionScrollToTop, Common::Rect(544, 333), 100, 0);
+		_startTime = _vm->getTotalPlayTime();
 		return;
+	}
 
-	if (_vm->getTotalPlayTime() - _startTime >= 7 * 1000) {
+	if (_vm->getTotalPlayTime() - _startTime >= 15 * 1000) {
 		_curImage++;
 
 		// After the 6th image has shown, it's time to quit
-		if (_curImage == 7) {
-			_vm->quitGame();
+		if (_curImage >= 7) {
+			//_vm->quitGame();
+            		_creditsEnded = true;
+            		_creditsRunning = false;
 			return;
 		}
 
 		// Draw next image
 		_vm->getCard()->drawBackground();
-		_vm->_gfx->copyBackBufferToScreen(Common::Rect(544, 333));
+		//_vm->_gfx->copyBackBufferToScreen(Common::Rect(544, 333));
+		_vm->_gfx->runTransition(kTransitionScrollToTop, Common::Rect(544, 333), 100, 0);
+
 
 		_startTime = _vm->getTotalPlayTime();
 	}
@@ -95,9 +106,11 @@ void Credits::o_runCredits(uint16 var, const ArgumentsArray &args) {
 	_vm->setMainCursor(kDefaultMystCursor);
 
 	// Activate the credits
-	_creditsRunning = true;
 	_curImage = 0;
 	_startTime = _vm->getTotalPlayTime();
+	_creditsEnded = false;
+	_vm->_gfx->clearScreen();
+	_vm->_gfx->clearBackBuffer();
 }
 
 } // End of namespace MystStacks

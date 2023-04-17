@@ -146,14 +146,22 @@ void Intro::o_playIntroMovies(uint16 var, const ArgumentsArray &args) {
 void Intro::mystLinkBook_run() {
 	if (_startTime == 1) {
 		_startTime = 0;
+        int16 rectFixX = _linkBookMovie->getRect().left;
+        int16 rectFixY = _linkBookMovie->getRect().top;
+        
+        if (!_vm->wait(500, true)) {
+            _linkBookMovie->getVideo()->setVisible(false);
+            _linkBookMovie->playMovie();
+        }
 
 		if (!_vm->wait(5000, true)) {
-			_linkBookMovie->playMovie();
+            _linkBookMovie->getVideo()->setVisible(true);
+            _linkBookMovie->getVideo()->moveTo(rectFixX, rectFixY);
 			_vm->_gfx->copyImageToBackBuffer(4, Common::Rect(544, 333));
 			_vm->_gfx->copyBackBufferToScreen(Common::Rect(544, 333));
 		}
 	} else if (!_linkBookMovie->isPlaying()) {
-		_vm->changeToCard(5, kTransitionRightToLeft);
+		_vm->changeToCard(5, kTransitionCopy);
 	}
 }
 

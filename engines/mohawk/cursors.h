@@ -59,6 +59,7 @@ public:
 	virtual void hideCursor();
 	virtual void setCursor(uint16 id);
 	virtual void setCursor(const Common::String &name) {}
+    	virtual void setCursorAnimated(uint16 idNew, uint16 idOld);
 	virtual void setDefaultCursor();
 	virtual bool hasSource() const { return false; }
 
@@ -84,16 +85,16 @@ private:
 
 #ifdef ENABLE_MYST
 
-// 803-805 are animated, one large bmp which is in chunks - these are NEVER USED
+// 803-805 are animated, one large bmp which is in chunks - these are used too, and are now implemented
 // Other cursors (200, 300, 400, 500, 600, 700) are not the same in each stack
 enum {
 	kDefaultMystCursor = 100,				// The default hand
 	kWhitePageCursor = 800,					// Holding a white page
 	kRedPageCursor = 801,					// Holding a red page
 	kBluePageCursor = 802,					// Holding a blue page
-	// kDroppingWhitePageAnimCursor = 803,
-	// kDroppingRedPageAnimCursor = 804,
-	// kDroppingBluePageAnimCursor = 805,
+	kDroppingWhitePageAnimCursor = 803,
+	kDroppingRedPageAnimCursor = 804,
+	kDroppingBluePageAnimCursor = 805,
 	kNewMatchCursor = 900,					// Match that has not yet been lit
 	kLitMatchCursor = 901,					// Match that's burning
 	kDeadMatchCursor = 902,					// Match that's been extinguished
@@ -115,6 +116,7 @@ public:
 	void showCursor() override;
 	void hideCursor() override;
 	void setCursor(uint16 id) override;
+    	void setCursorAnimated(uint16 idNew, uint16 idOld) override;
 	void setDefaultCursor() override;
 	bool hasSource() const override { return true; }
 

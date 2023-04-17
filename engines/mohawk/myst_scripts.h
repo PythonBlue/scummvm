@@ -27,6 +27,7 @@
 #include "common/util.h"
 
 #include "mohawk/myst_state.h"
+#include "common/config-manager.h"
 
 namespace Mohawk {
 
@@ -187,6 +188,8 @@ private:
 
 	MystArea *_invokingResource;
 	int32 _scriptNestingLevel;
+    
+    int16 drawId;
 
 	const MystStack _stackId;
 

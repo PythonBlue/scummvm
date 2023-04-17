@@ -19,7 +19,12 @@
  *
  */
 
+#include "common/system.h"
+
+#include "mohawk/myst.h"
 #include "mohawk/myst_sound.h"
+#include "mohawk/myst_scripts.h"
+#include "mohawk/myst_card.h"
 
 #include "mohawk/myst.h"
 #include "mohawk/resource.h"
@@ -70,8 +75,30 @@ void MystSound::playEffect(uint16 id, bool loop) {
 		default:
 			break;
 	}
-
-	stopEffect();
+    if (_vm->_stack->getStackId() == kMystStack && (id == 6097))
+    {
+        id = 5097;
+    }
+    else if (_vm->_stack->getStackId() == kMystStack && (id == 6103) && _vm->_sound->isEffectPlaying())
+        id = 5097;
+    else if (_vm->_stack->getStackId() == kMystStack && (id == 5097))
+    {
+        id = 6097;
+    }
+    if (_vm->_stack->getStackId() == kMechanicalStack && (id == 9119 || id == 9120 || id == 14156 || id == 9327) && _vm->_sound->isEffectPlaying())
+        return;
+    else if (_vm->_stack->getStackId() == kMechanicalStack && id == 12119 && _vm->getCard()->getId() == 6119)
+    {
+        while (isEffectPlaying())
+            _vm->doFrame();
+    }
+    else if (_vm->_stack->getStackId() == kMechanicalStack && id == 16156)
+    {
+        playEffect(11119);
+        while (isEffectPlaying())
+            _vm->doFrame();
+    }
+    stopEffect();
 
 	Audio::RewindableAudioStream *rewindStream = makeAudioStream(id);
 	if (!rewindStream) {
@@ -125,7 +152,7 @@ uint16 MystSound::convertMystID(uint16 id) {
 void MystSound::playBackground(uint16 id, uint16 volume) {
 	debug(0, "Replacing background sound with %d", id);
 
-	stopEffect();
+	//stopEffect();
 
 	Common::String name = _vm->getResourceName(ID_MSND, convertMystID(id));
 
@@ -161,22 +188,51 @@ void MystSound::playBackground(uint16 id, uint16 volume) {
 }
 
 void MystSound::stopBackground() {
+    if (_vm->getCard())
+        {
+        	switch (_vm->getCard()->getId())
+        	{
+            	case 6119:
+                    	return;
+            	default:
+            		break;
+        	}
+            //if (_vm->_stack->getStackId() == kDniStack && _vm->getCard()->getId() != 5017 && _vm->getCard()->getId() != 5022 && _vm->getCard()->getId() != 5009)
+            //return;
+            if (_vm->_stack->getStackId() == kDniStack || _vm->getCard()->getId() == 6156)
+            {
+                pauseBackground();
+                return;
+            }
+    	}
+
 	_vm->_mixer->stopHandle(_backgroundHandle);
 	_backgroundId = 0;
 	_backgroundHandle = Audio::SoundHandle();
 }
 
 void MystSound::pauseBackground() {
-	_vm->_mixer->pauseHandle(_backgroundHandle, true);
+    placeholderVolume = _vm->_mixer->getChannelVolume(_backgroundHandle);
+    _vm->setSoundFade(2, _backgroundHandle, placeholderVolume);
+    backgroundPaused = true;
 }
 
 void MystSound::resumeBackground() {
-	stopEffect();
-	_vm->_mixer->pauseHandle(_backgroundHandle, false);
+	//stopEffect();
+    if (_vm->getCard()->getId() == 4709)
+        return;
+    _vm->_mixer->pauseHandle(_backgroundHandle, false);
+    backgroundPaused = false;
+    _vm->doFrame();
+    _vm->setSoundFade(1, _backgroundHandle, placeholderVolume);
 }
 
 void MystSound::changeBackgroundVolume(uint16 volume) {
 	_vm->_mixer->setChannelVolume(_backgroundHandle, volume >> 8);
+}
+
+uint16 MystSound::getBackgroundVolume() {
+    return _vm->_mixer->getChannelVolume(_backgroundHandle);
 }
 
 void MystSound::playSpeech(uint16 id, CueList *cueList) {

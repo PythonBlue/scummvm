@@ -58,6 +58,18 @@ public:
 	bool isSpeechPlaying();
 	uint getSpeechNumSamplesPlayed();
 	void stopSpeech();
+    bool backgroundPaused;
+    uint16 placeholderVolume;
+    uint16 getBackgroundVolume();
+    
+    Audio::SoundHandle getBackgroundHandle()
+    {
+        return _backgroundHandle;
+    };
+    void setBackgroundId(uint16 id)
+    {
+        _backgroundId = id;
+    };
 
 private:
 	MohawkEngine_Myst *_vm;

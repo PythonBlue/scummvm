@@ -222,7 +222,10 @@ public:
 	/**
 	 * Load the subtitles
 	 */
-	void loadSubtitles(const char *fname) { _subtitles.loadSRTFile(fname); }
+    void loadSubtitles(const char *fname) { _subtitles.loadSRTFile(fname); }
+        
+    void setVisible(bool check) { _visible = check; }
+    bool getVisible() { return _visible; }
 private:
 	// Non-changing variables
 	Video::VideoDecoder *_video;
@@ -237,6 +240,7 @@ private:
 	Audio::Timestamp _start;
 
 	Video::Subtitles _subtitles;
+    bool _visible;
 };
 
 typedef Common::SharedPtr<VideoEntry> VideoEntryPtr;

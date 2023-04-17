@@ -336,6 +336,7 @@ void Mechanical::o_snakeBoxTrigger(uint16 var, const ArgumentsArray &args) {
 
 void Mechanical::o_fortressStaircaseMovie(uint16 var, const ArgumentsArray &args) {
 	VideoEntryPtr staircase = _vm->playMovie("hhstairs", kMechanicalStack);
+    staircase->setRate(Common::Rational(1,2));
 	staircase->moveTo(174, 222);
 
 	if (_state.staircaseState) {
@@ -354,7 +355,7 @@ void Mechanical::o_elevatorRotationStart(uint16 var, const ArgumentsArray &args)
 	_elevatorRotationLeverMoving = true;
 	_elevatorRotationSpeed = 0;
 
-	_vm->_sound->stopBackground();
+	//_vm->_sound->stopBackground();
 
 	_vm->_cursor->setCursor(700);
 }
@@ -369,7 +370,7 @@ void Mechanical::o_elevatorRotationMove(uint16 var, const ArgumentsArray &args) 
 	int16 step = ((rect.bottom - mouse.y) * lever->getNumFrames()) / rect.height();
 	step = CLIP<int16>(step, 0, maxStep);
 
-	_elevatorRotationSpeed = step * 0.1f;
+	_elevatorRotationSpeed = step * 0.01f;
 
 	// Draw current frame
 	lever->drawFrame(step);
@@ -394,7 +395,7 @@ void Mechanical::o_elevatorRotationStop(uint16 var, const ArgumentsArray &args) 
 	// Stop persistent script
 	_elevatorRotationLeverMoving = false;
 
-	float speed = _elevatorRotationSpeed * 10;
+	float speed = _elevatorRotationSpeed * 100;
 
 	if (speed > 0) {
 
@@ -562,13 +563,15 @@ void Mechanical::o_elevatorWindowMovie(uint16 var, const ArgumentsArray &args) {
 	VideoEntryPtr window = _vm->playMovie("ewindow", kMechanicalStack);
 	window->moveTo(253, 0);
 	window->setBounds(Audio::Timestamp(0, startTime, 600), Audio::Timestamp(0, endTime, 600));
-
+    while (_vm->_sound->isEffectPlaying() && !Engine::shouldQuit() && !_vm->_escapePressed)
+        _vm->doFrame();
+    _vm->_sound->playEffect(9120, true);
 	_vm->waitUntilMovieEnds(window);
 }
 
 void Mechanical::o_elevatorGoMiddle(uint16 var, const ArgumentsArray &args) {
 	_elevatorTooLate = false;
-	_elevatorTopCounter = 5;
+	_elevatorTopCounter = 7;
 	_elevatorGoingMiddle = true;
 	_elevatorInCabin = true;
 	_elevatorNextTime = _vm->getTotalPlayTime() + 1000;
@@ -576,7 +579,7 @@ void Mechanical::o_elevatorGoMiddle(uint16 var, const ArgumentsArray &args) {
 
 void Mechanical::elevatorGoMiddle_run() {
 	uint32 time = _vm->getTotalPlayTime();
-	if (_elevatorNextTime < time) {
+	if (_elevatorNextTime <= time) {
 		_elevatorNextTime = time + 1000;
 		_elevatorTopCounter--;
 
@@ -609,7 +612,7 @@ void Mechanical::elevatorGoMiddle_run() {
 				_vm->_sound->playEffect(8120);
 				_vm->_gfx->copyImageToBackBuffer(6327, Common::Rect(544, 333));
 				_vm->wait(500);
-				_vm->_sound->playEffect(9120);
+				//_vm->_sound->playEffect(9120);
 				static uint16 moviePos[2] = { 3540, 5380 };
 				o_elevatorWindowMovie(0, ArgumentsArray(moviePos, ARRAYSIZE(moviePos)));
 				_vm->_gfx->copyBackBufferToScreen(Common::Rect(544, 333));
@@ -618,7 +621,7 @@ void Mechanical::elevatorGoMiddle_run() {
 
 				_elevatorPosition = 1;
 
-				_vm->changeToCard(6327, kTransitionRightToLeft);
+				_vm->changeToCard(6327, kTransitionCopy);
 			}
 		}
 	}
@@ -627,6 +630,8 @@ void Mechanical::elevatorGoMiddle_run() {
 void Mechanical::o_elevatorTopMovie(uint16 var, const ArgumentsArray &args) {
 	uint16 startTime = args[0];
 	uint16 endTime = args[1];
+    if (_vm->_sound->backgroundPaused == true)
+        _vm->_sound->resumeBackground();
 
 	VideoEntryPtr window = _vm->playMovie("hcelev", kMechanicalStack);
 	window->moveTo(206, 38);
@@ -763,12 +768,12 @@ void Mechanical::fortressRotation_run() {
 	if (oldRate >= 0.1 || ABS<int32>(positionInQuarter) >= 30 || _fortressRotationBrake) {
 
 		double newRate = oldRate;
-		if (_fortressRotationBrake && (double)_fortressRotationBrake * 0.2 > oldRate) {
-			newRate += 0.1;
+		if (_fortressRotationBrake && (double)_fortressRotationBrake * 0.1 > oldRate) {
+			newRate += 0.05;
 		}
 
 		// Don't let the gears get stuck between two fortress positions
-		if (ABS<double>(oldRate) <= 0.05) {
+		if (ABS<double>(oldRate) <= 0.025) {
 			if (oldRate <= 0.0) {
 				newRate += oldRate;
 			} else {
@@ -776,9 +781,9 @@ void Mechanical::fortressRotation_run() {
 			}
 		} else {
 			if (oldRate <= 0.0) {
-				newRate += 0.05;
+				newRate += 0.025;
 			} else {
-				newRate -= 0.05;
+				newRate -= 0.025;
 			}
 		}
 
@@ -786,7 +791,7 @@ void Mechanical::fortressRotation_run() {
 		newRate +=  (double) (positionInQuarter / 1500.0)
 				* (double) (9 - _fortressRotationSpeed) / 9.0;
 
-		newRate = CLIP<double>(newRate, -2.5, 2.5);
+		newRate = CLIP<double>(newRate, -1.25, 1.25);
 
 		gears->setRate(Common::Rational((int)(newRate * 1000.0), 1000));
 
@@ -896,12 +901,12 @@ void Mechanical::fortressSimulation_run() {
 		if (oldRate >= 0.1 || ABS<int32>(positionInQuarter) >= 30 || _fortressSimulationBrake) {
 
 			double newRate = oldRate;
-			if (_fortressSimulationBrake && (double)_fortressSimulationBrake * 0.2 > oldRate) {
-				newRate += 0.1;
+			if (_fortressSimulationBrake && (double)_fortressSimulationBrake * 0.1 > oldRate) {
+				newRate += 0.05;
 			}
 
 			// Don't let the gears get stuck between two fortress positions
-			if (ABS<double>(oldRate) <= 0.05) {
+			if (ABS<double>(oldRate) <= 0.025) {
 				if (oldRate <= 0.0) {
 					newRate += oldRate;
 				} else {
@@ -909,9 +914,9 @@ void Mechanical::fortressSimulation_run() {
 				}
 			} else {
 				if (oldRate <= 0.0) {
-					newRate += 0.05;
+					newRate += 0.025;
 				} else {
-					newRate -= 0.05;
+					newRate -= 0.025;
 				}
 			}
 
@@ -919,7 +924,7 @@ void Mechanical::fortressSimulation_run() {
 			newRate +=  (double) (positionInQuarter / 1500.0)
 					* (double) (9 - _fortressSimulationSpeed) / 9.0;
 
-			newRate = CLIP<double>(newRate, -2.5, 2.5);
+			newRate = CLIP<double>(newRate, -1.25, 1.25);
 
 			// HACK: Support negative rates with edit lists
 

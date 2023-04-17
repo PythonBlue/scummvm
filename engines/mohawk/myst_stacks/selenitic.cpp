@@ -892,6 +892,7 @@ void Selenitic::o_soundLockButton(uint16 var, const ArgumentsArray &args) {
 	_vm->_sound->playEffect(1147);
 	_soundLockButton->drawConditionalDataToScreen(1);
 	_vm->_cursor->hideCursor();
+    _vm->_stack->soundWaitStop();
 
 	soundLockCheckSolution(_soundLockSlider1, _state.soundLockSliderPositions[0], 5, solved);
 	soundLockCheckSolution(_soundLockSlider2, _state.soundLockSliderPositions[1], 9, solved);

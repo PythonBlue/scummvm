@@ -230,10 +230,10 @@ uint16 Stoneship::getVar(uint16 var) {
 		return _brotherDoorOpen;
 	case 19: // Brother Room Door State
 		if (_brotherDoorOpen) {
-			if (_state.lightState)
-				return 2; // Open, Light On
+			if (_state.generatorPowerAvailable != 1)
+				return 1; // Open, Light On
 			else
-				return 1; // Open, Light Off
+				return 2; // Open, Light Off
 		} else {
 			return 0; // Closed
 		}
@@ -518,9 +518,9 @@ void Stoneship::o_generatorStart(uint16 var, const ArgumentsArray &args) {
 	MystAreaVideo *movie = static_cast<MystAreaVideo *>(handle->getSubResource(0));
 	movie->playMovie();
 
-	soundId = handle->getList2(0);
-	if (soundId)
-		_vm->_sound->playEffect(soundId, true);
+	//soundId = handle->getList2(0);
+	//if (soundId)
+		//_vm->_sound->playEffect(soundId, true);
 }
 
 void Stoneship::o_generatorStop(uint16 var, const ArgumentsArray &args) {
@@ -555,6 +555,8 @@ void Stoneship::chargeBattery_run() {
 		_batteryNextTime = time + 1000;
 		_state.generatorDuration += 30000;
 	}
+    if (!_vm->_sound->isEffectPlaying())
+        _vm->_sound->playEffect(3161, true);
 }
 
 uint16 Stoneship::batteryRemainingCharge() {
@@ -686,14 +688,15 @@ void Stoneship::o_chestValveVideos(uint16 var, const ArgumentsArray &args) {
 
 		_vm->waitUntilMovieEnds(valve);
 
-		_vm->_sound->playEffect(3132);
+		_vm->_sound->playEffect(3132, true);
 
 		for (uint i = 0; i < 25; i++) {
 			valve = _vm->playMovie("ligspig", kStoneshipStack);
 			valve->moveTo(97, 267);
-			valve->setBounds(Audio::Timestamp(0, 650, 600), Audio::Timestamp(0, 750, 600));
+			valve->setBounds(Audio::Timestamp(0, 650, 600), Audio::Timestamp(0, 850, 600));
 			_vm->waitUntilMovieEnds(valve);
 		}
+        _vm->_sound->stopEffect();
 
 		_vm->_sound->resumeBackground();
 	} else {

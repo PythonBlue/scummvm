@@ -64,6 +64,10 @@
 // Common files for detection & engines
 #include "mohawk/myst_metaengine.h"
 
+//Fixes specific to this fork for Myst
+
+#include "mohawk/myst_fixes.h"
+
 namespace Mohawk {
 
 MohawkEngine_Myst::MohawkEngine_Myst(OSystem *syst, const MohawkGameDescription *gamedesc) :
@@ -96,6 +100,10 @@ MohawkEngine_Myst::MohawkEngine_Myst(OSystem *syst, const MohawkGameDescription 
 	_mouseMoved = false;
 	_escapePressed = false;
 	_waitingOnBlockingOperation = false;
+	_soundFade = 0;
+	_fadeTotal = 0;
+    
+    waitToResume = false;
 
 	// We have a custom GMM subclass to show the credits when quitting
 	// and to support the drop page and other actions in the options dialog.
@@ -397,6 +405,7 @@ void MohawkEngine_Myst::waitUntilMovieEnds(const VideoEntryPtr &video) {
 
 void MohawkEngine_Myst::playSoundBlocking(uint16 id) {
 	_waitingOnBlockingOperation = true;
+    
 	_sound->playEffect(id);
 
 	while (_sound->isEffectPlaying() && !shouldQuit()) {
@@ -620,6 +629,40 @@ void MohawkEngine_Myst::doFrame() {
 		_waitingOnBlockingOperation = true;
 		_stack->runPersistentScripts();
 		_waitingOnBlockingOperation = false;
+	}
+
+	if (_soundFade != 0)
+	{
+		_fadeTotal += 10;
+		if (_soundFade == 1)
+		{
+			_mixer->setChannelVolume(_soundHandle, (_fadeTotal * _soundVol / 500));
+			if (_fadeTotal == 500)
+			{
+				_soundFade = 0;
+				_fadeTotal = 0;
+			}
+		}
+		else
+		{
+			_mixer->setChannelVolume(_soundHandle, ((500 - _fadeTotal) * _soundVol / 500));
+			if (_fadeTotal == 500)
+            {
+                _soundFade = 0;
+                _fadeTotal = 0;
+                if (_stack->getStackId() == kDniStack)
+                {
+                    _sound->backgroundPaused = false;
+                    _mixer->stopHandle(_sound->getBackgroundHandle());
+                    _sound->setBackgroundId(0);
+                    _sound->getBackgroundHandle() = Audio::SoundHandle();
+                }
+                else
+                {
+                    _mixer->pauseHandle(_soundHandle, true);
+                }
+			}
+		}
 	}
 
 	Common::Event event;
@@ -849,15 +892,34 @@ void MohawkEngine_Myst::changeToStack(MystStack stackId, uint16 card, uint16 lin
 	// Also play a flyby when first linking to Myst.
 	if (isGameVariant(GF_ME)
 			&& ((_stack && _stack->getStackId() == kMystStack) || (stackId == kMystStack && card == 4134))) {
-		playFlybyMovie(stackId);
+        if (ConfMan.getBool("playmystflyby") == true)
+            playFlybyMovie(stackId);
 	}
 
 	_sound->stopBackground();
 
-	_gfx->clearScreen();
-
-	if (linkSrcSound)
-		playSoundBlocking(linkSrcSound);
+	if (ConfMan.getBool("transition_mode") && _card) {
+		_gfx->clearBackBuffer();
+		if (linkSrcSound)
+			_sound->playEffect(linkSrcSound);
+		if (_stack->getStackId() != kMenuStack)
+		{ 
+			for (uint16 i = 0; i < 50; i++)
+				doFrame();
+		}
+		_cursor->hideCursor();
+		_gfx->runTransition(kTransitionDissolve, Common::Rect(544, 333), 10, 0);
+		_gfx->clearScreen();
+		while (_sound->isEffectPlaying())
+			doFrame();
+	}
+	else
+	{
+		_cursor->hideCursor();
+		_gfx->clearScreen();
+		if (linkSrcSound)
+			playSoundBlocking(linkSrcSound);
+	}
 
 	if (_card) {
 		_card->leave();
@@ -932,16 +994,43 @@ void MohawkEngine_Myst::changeToStack(MystStack stackId, uint16 card, uint16 lin
 			g_system->delayMillis(_rnd->getRandomNumberRng(1000, 1200));
 		}
 	}
+    
+    //Originally, ScummVM had no music at all for the D'ni Stack. Granted, this was also the case in the HyperCard version of Myst in that the music only plays unlooped once, but it still feels barren without it...
+    
+    if (stackId == kDniStack && _gameState->_globals.ending == kForgotPage)
+            _sound->playBackground(6038);
+    else if (stackId == kDniStack)
+            _sound->playBackground(5038);
 
-	changeToCard(card, kTransitionCopy);
-
-	if (linkDstSound)
-		playSoundBlocking(linkDstSound);
+	if (ConfMan.getBool("transition_mode") && stackId != kCreditsStack)
+	{
+        if (linkDstSound)
+            _sound->playEffect(linkDstSound);
+        changeToCard(card, kTransitionDissolve);
+	}
+	else
+	{
+		changeToCard(card, kTransitionCopy);
+		if (linkDstSound)
+			playSoundBlocking(linkDstSound);
+	}
+	if (_stack->getStackId() != kIntroStack && _stack->getStackId() != kMenuStack)
+		_cursor->showCursor();
 }
 
 void MohawkEngine_Myst::changeToCard(uint16 card, TransitionType transition) {
 	debug(2, "changeToCard(%d)", card);
-
+    
+    Common::Rect transRect = Common::Rect(544, 333);
+    if (_card)
+    {
+        transition = _fixes->TransitionFix(transition, _stack->getStackId(), _card->getId(), card, _system->getEventManager()->getMousePos());
+        if (_card->getId() == 4162 && (card == 4159 || card == 4160))
+            transRect = Common::Rect(89, 0, 467, 333);
+        else if (_card->getId() == 4162 && card == 4166)
+            transRect = Common::Rect(89, 0, 467, 333);
+    }
+    
 	_stack->disablePersistentScripts();
 
 	_video->stopVideos();
@@ -953,8 +1042,11 @@ void MohawkEngine_Myst::changeToCard(uint16 card, TransitionType transition) {
 	_mouseClicked = false;
 	_mouseMoved = false;
 	_escapePressed = false;
+    
+    uint16 steps = 20;
 
 	if (_card) {
+        steps = _fixes->stepFix(steps, _stack->getStackId(), _card->getId(), card, transition, false);
 		_card->leave();
 	}
 
@@ -985,12 +1077,34 @@ void MohawkEngine_Myst::changeToCard(uint16 card, TransitionType transition) {
 	// Make sure the screen is updated
 	if (transition != kNoTransition) {
 		if (ConfMan.getBool("transition_mode")) {
-			_gfx->runTransition(transition, Common::Rect(544, 333), 10, 0);
+            _video->pauseVideos();
+			_gfx->runTransition(transition, transRect, steps, 0);
+            _gfx->copyBackBufferToScreen(Common::Rect(544, 333));
+            _video->resumeVideos();
 		} else {
 			_gfx->copyBackBufferToScreen(Common::Rect(544, 333));
 		}
 	}
 
+    if ( _sound->backgroundPaused == true && waitToResume == true)
+    {
+        _sound->resumeBackground();
+        waitToResume = false;
+    }
+    if (_card->getId() == 6056 || _card->getId() == 6061 || _card->getId() == 6094)
+        _sound->playBackground(6083);
+    if (_card->getId() == 6156)
+        _sound->pauseBackground();
+    if (_card->getId() == 6338 || _card->getId() == 6339)
+        _sound->resumeBackground();
+    //if (_stack->getStackId() == kDniStack && (_gameState->_globals.ending == kAtrusWantsPage || _gameState->_globals.ending == kAtrusLeaves || _gameState->_globals.ending == kBooksDestroyed))
+        //_sound->playBackground(5038);
+    //else if (_stack->getStackId() == kDniStack)
+        //_sound->playBackground(6038);
+    //if (_stack->getStackId() == kDniStack && _sound->backgroundPaused == true)
+        //_sound->resumeBackground();
+	
+    
 	// Debug: Show resource rects
 	if (_showResourceRects)
 		_card->drawResourceRects();
@@ -1000,6 +1114,12 @@ void MohawkEngine_Myst::setMainCursor(uint16 cursor) {
 	_currentCursor = _mainCursor = cursor;
 	_cursor->setCursor(_currentCursor);
 }
+    
+    void MohawkEngine_Myst::setMainCursorAnimated(uint16 cursor, uint16 oldCursor) {
+        oldCursor = _currentCursor;
+        _currentCursor = _mainCursor = cursor;
+        _cursor->setCursorAnimated(_currentCursor, oldCursor);
+    }
 
 void MohawkEngine_Myst::refreshCursor() {
 	int16 cursor = _card->getActiveResourceCursor();
@@ -1123,22 +1243,149 @@ bool MohawkEngine_Myst::canSaveGameStateCurrently() {
 	}
 }
 
+void MohawkEngine_Myst::dropPageAnim(uint16 page)
+{
+    //update cursor and play drop page sound
+    switch(page)
+    {
+        case kWhitePage:
+        {
+            if (_card->getId() != 4143)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kWhitePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueLibraryPage:
+        {
+            if (getCard()->getId() != 4368)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueSeleniticPage:
+        {
+            if (getCard()->getId() != 1155)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueMechanicalPage:
+        {
+            if (getCard()->getId() != 6020)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueStoneshipPage:
+        {
+            if (getCard()->getId() != 2002)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueChannelwoodPage:
+        {
+            if (getCard()->getId() != 3012)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kBlueFirePlacePage:
+        {
+            if (getCard()->getId() != 4166)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kBluePageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedLibraryPage:
+        {
+            if (getCard()->getId() != 4361)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedSeleniticPage:
+        {
+            if (getCard()->getId() != 1228)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedMechanicalPage:
+        {
+            if (getCard()->getId() != 6201)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedStoneshipPage:
+        {
+            if (getCard()->getId() != 2197)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedChannelwoodPage:
+        {
+            if (getCard()->getId() != 3318)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        case kRedFirePlacePage:
+        {
+            if (getCard()->getId() != 4166)
+            {
+                _sound->playEffect(800);
+                setMainCursorAnimated(kRedPageCursor, getMainCursor());
+            }
+            break;
+        }
+        default:
+            break;
+    }
+}
+
 void MohawkEngine_Myst::dropPage() {
 	HeldPage page = _gameState->_globals.heldPage;
 	bool whitePage = page == kWhitePage;
 	bool bluePage = page - 1 < 6;
 	bool redPage = page - 7 < 6;
 
-	// Play drop page sound
-	_sound->playEffect(800);
-
 	// Drop page
 	_gameState->_globals.heldPage = kNoPage;
+    dropPageAnim(page);
 
 	// Redraw page area
-	if (whitePage && _gameState->_globals.currentAge == kMystLibrary) {
-		_stack->toggleVar(41);
-		_card->redrawArea(41);
+	if (whitePage) {
+		if (_gameState->_globals.currentAge == kMystLibrary) {
+			_stack->toggleVar(41);
+			_card->redrawArea(41);
+		}
 	} else if (bluePage) {
 		if (page == kBlueFirePlacePage) {
 			if (_gameState->_globals.currentAge == kMystLibrary)
@@ -1230,9 +1477,34 @@ void MohawkEngine_Myst::applySoundBlock(const MystSoundBlock &block) {
 		_sound->changeBackgroundVolume(soundActionVolume);
 	} else if (soundAction == kMystSoundActionStop) {
 		debug(2, "Stopping sound");
+        if (_stack->getStackId() == kMystStack)
+        {
+            if (getCard()->getId() == 4319 || getCard()->getId() == 4709 || getCard()->getId() == 4705)
+            {
+                _sound->placeholderVolume = _sound->getBackgroundVolume();
+                _sound->stopEffect();
+                return;
+            }
+            if (getCard()->getId() == 4698 ||
+                getCard()->getId() == 4701 ||
+                getCard()->getId() == 4702)
+            {
+                _sound->pauseBackground();
+                return;
+            }
+        }
 		_sound->stopBackground();
 	} else if (soundAction > 0) {
 		debug(2, "Playing new sound %d", soundAction);
+        if (_stack->getStackId() == kMystStack)
+        {
+            if ((getCard()->getId() == 4697 ||
+                getCard()->getId() == 4704))
+            {
+                waitToResume = true;
+                return;
+            }
+        }
 		_sound->playBackground(soundAction, soundActionVolume);
 	} else {
 		error("Unknown sound action %d", soundAction);

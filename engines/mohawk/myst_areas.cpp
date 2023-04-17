@@ -146,10 +146,112 @@ MystAreaAction::MystAreaAction(MohawkEngine_Myst *vm, ResourceType type, Common:
 }
 
 void MystAreaAction::handleMouseUp() {
+    if (_vm->_stack->getStackId() == kMystStack && _type == kMystAreaAction)
+    {
+        switch (_vm->getCard()->getId())
+        {
+            case 4159:
+            case 4160:
+            {
+                if (this->getRect().right < 80)
+                {
+                    Common::Rect rectout = Common::Rect(43,166,77,194);
+                    _vm->_gfx->copyImageSectionToScreen(4159, rectout, rectout);
+                }
+                break;
+            }
+            case 4162:
+            case 4166:
+            {
+                if (this->getRect().right < 80)
+                {
+                    Common::Rect rectout = Common::Rect(34,162,75,219);
+                    _vm->_gfx->copyImageSectionToScreen(4162, rectout, rectout);
+                }
+                break;
+            }
+        }
+    }
+    
 	// Keep a reference to the stack so it is not freed if a script switches to another stack
 	MystScriptParserPtr stack = _vm->_stack;
 
 	stack->runScript(_script, this);
+}
+
+void MystAreaAction::handleMouseDown() {
+    
+    if (_vm->_stack->getStackId() == kMystStack && _type == kMystAreaAction)
+    {
+        switch (_vm->getCard()->getId())
+        {
+            case 4006:
+            {
+                _vm->playSoundBlocking(4006);
+                int16 theXout = 322;
+                int16 theYout = 232;
+                Common::Rect rectout = Common::Rect(theXout,theYout,theXout + 50,theYout + 42);
+                Common::Rect rectin = Common::Rect(theXout,58,theXout + 50,58 + 42);
+                _vm->_gfx->copyImageSectionToBackBuffer(4006, rectin, rectout);
+                _vm->_gfx->copyImageSectionToScreen(4007, Common::Rect(50,42), rectout);
+                break;
+            }
+            case 4159:
+            case 4160:
+            {
+                if (this->getRect().right < 80)
+                {
+                    _vm->playSoundBlocking(4006);
+                    int16 theXout = 43;
+                    int16 theYout = 166;
+                    Common::Rect rectout = Common::Rect(theXout,theYout,theXout + 34,theYout + 28);
+                    _vm->_gfx->copyImageSectionToScreen(4947, Common::Rect(34,28), rectout);
+                }
+                break;
+            }
+            case 4162:
+            case 4166:
+            {
+                if (this->getRect().right < 80)
+                {
+                    _vm->playSoundBlocking(4006);
+                    int16 theXout = 34;
+                    int16 theYout = 162;
+                    Common::Rect rectout = Common::Rect(theXout,theYout,theXout + 41,theYout + 57);
+                    _vm->_gfx->copyImageSectionToScreen(4948, Common::Rect(41,57), rectout);
+                }
+                break;
+            }
+            case 4489:
+            {
+                if (this->getRect().left > 320)
+                {
+                    _vm->playSoundBlocking(4006);
+                    int16 theXout = 423;
+                    int16 theYout = 148;
+                    Common::Rect rectout = Common::Rect(theXout,theYout,theXout + 37,theYout + 38);
+                    _vm->_gfx->copyImageSectionToBackBuffer(4489, rectout, rectout);
+                    _vm->_gfx->copyImageSectionToScreen(4485, Common::Rect(37,38), rectout);
+                    break;
+                }
+            }
+            case 4490:
+            {
+                if (this->getRect().left > 320)
+                {
+                _vm->playSoundBlocking(4006);
+                int16 theXout = 415;
+                int16 theYout = 147;
+                Common::Rect rectout = Common::Rect(theXout,theYout,theXout + 40,theYout + 49);
+                _vm->_gfx->copyImageSectionToBackBuffer(4490, rectout, rectout);
+                _vm->_gfx->copyImageSectionToScreen(4486, Common::Rect(40,49), rectout);
+                break;
+                }
+            }
+            default:
+                break;
+        }
+    }
 }
 
 const Common::String MystAreaAction::describe() {
@@ -339,10 +441,56 @@ void MystAreaActionSwitch::handleCardChange() {
 }
 
 void MystAreaActionSwitch::handleMouseUp() {
+    if (_vm->_stack->getStackId() == kStoneshipStack)
+    {
+        if (_vm->getCard()->getId() == 2185 && _type == kMystAreaImageSwitch)
+            _vm->playSoundBlocking(2294);
+    }
 	doSwitch(&MystArea::handleMouseUp);
 }
 
 void MystAreaActionSwitch::handleMouseDown() {
+    if (_vm->_stack->getStackId() == kStoneshipStack)
+    {
+        if (_vm->getCard()->getId() == 2185 && _type == kMystAreaImageSwitch)
+        {
+            int16 theXin1 = 0;
+            int16 theYin = 54;
+            int16 theXout1 = 193;
+            int16 theYout = 132;
+            int16 theXin2 = 52;
+            int16 theXout2 = 245;
+            int16 theXin3 = 104;
+            int16 theXout3 = 297;
+            Common::Rect rectin1 = Common::Rect(theXin1,theYin,theXin1 + 52,theYin + 54);
+            Common::Rect rectin2 = Common::Rect(theXin2,theYin,theXin2 + 52,theYin + 54);
+            Common::Rect rectin3 = Common::Rect(theXin3,theYin,theXin3 + 52,theYin + 54);
+            Common::Rect rectout1 = Common::Rect(theXout1,theYout,theXout1 + 52,theYout + 54);
+            Common::Rect rectout2 = Common::Rect(theXout2,theYout,theXout2 + 52,theYout + 54);
+            Common::Rect rectout3 = Common::Rect(theXout3,theYout,theXout3 + 52,theYout + 54);
+            if (rectout1.contains(_vm->_system->getEventManager()->getMousePos()))
+                _vm->_gfx->copyImageSectionToScreen(2383, rectin1, rectout1);
+            else if (rectout2.contains(_vm->_system->getEventManager()->getMousePos()))
+                _vm->_gfx->copyImageSectionToScreen(2383, rectin2, rectout2);
+            else if (rectout3.contains(_vm->_system->getEventManager()->getMousePos()))
+                _vm->_gfx->copyImageSectionToScreen(2383, rectin3, rectout3);
+            _vm->_sound->playEffect(2013);
+        }
+    }
+    if ((_vm->getCard()->getId() == 1008 || _vm->getCard()->getId() == 1010))
+    {
+        Common::Rect rectin = Common::Rect(0,0,32,32);
+        Common::Rect rectout = Common::Rect(417,219,417 + 32,219 + 32);
+        _vm->_gfx->copyImageSectionToScreen(1009, rectin, rectout);
+        _vm->_sound->playEffect(1008);
+    }
+    if ((_vm->getCard()->getId() == 1177 || _vm->getCard()->getId() == 1179 || _vm->getCard()->getId() == 1180))
+    {
+        Common::Rect rectin = Common::Rect(0,0,32,32);
+        Common::Rect rectout = Common::Rect(129,136,129 + 32,136 + 32);
+        _vm->_gfx->copyImageSectionToScreen(1178, rectin, rectout);
+        _vm->_sound->playEffect(1008);
+    }
 	doSwitch(&MystArea::handleMouseDown);
 }
 
@@ -364,7 +512,7 @@ MystAreaImageSwitch::MystAreaImageSwitch(MohawkEngine_Myst *vm, ResourceType typ
 			subImage.rect.top = rlstStream->readSint16LE();
 			subImage.rect.right = rlstStream->readSint16LE();
 			subImage.rect.bottom = rlstStream->readSint16LE();
-		} else {
+        } else {
 			// Use the hotspot rect as the source rect since the subimage is fullscreen
 			// Convert to bitmap coordinates (upside down)
 			subImage.rect.left = _rect.left;
@@ -372,6 +520,16 @@ MystAreaImageSwitch::MystAreaImageSwitch(MohawkEngine_Myst *vm, ResourceType typ
 			subImage.rect.right = _rect.right;
 			subImage.rect.bottom = 333 - _rect.top;
 		}
+        
+        if (_vm->_stack->getStackId() == kMystStack && subImage.wdib == 4706) {
+            subImage.rect.top = subImage.rect.top - 1;
+            subImage.rect.bottom = subImage.rect.bottom - 1;
+        }
+        
+        if (_vm->_stack->getStackId() == kChannelwoodStack && subImage.wdib == 3161) {
+            if (_rect.top < 300)
+                subImage.rect.top = subImage.rect.top + 1;
+        }
 
 		debugC(kDebugResource, "\twdib: %d", subImage.wdib);
 		debugC(kDebugResource, "\tleft: %d", subImage.rect.left);
@@ -414,15 +572,60 @@ void MystAreaImageSwitch::drawDataToScreen() {
 				warning("Image Switch Var %d: %d exceeds number of subImages %d", _imageSwitchVar, varValue, _subImages.size());
 		}
 	}
+    Common::Rect rectToDraw = _subImages[subImageId].rect;
+    switch(_vm->getCard()->getId())
+    {
+        case 4331:
+        case 4333:
+        case 4334:
+        case 4336:
+        case 4338:
+        case 4340:
+        case 4345:
+        case 4347:
+        case 4352:
+        case 4354:
+        case 4355:
+        case 4356:
+        case 4365:
+        case 4372:
+        {
+            _rect.top = _rect.top - 1;
+            _rect.bottom = _rect.bottom - 1;
+            break;
+        }
+        case 4361:
+        case 4368:
+        {
+            _rect.top = _rect.top - 1;
+            _rect.bottom = _rect.bottom - 1;
+            _rect.left = _rect.left + 4;
+            _rect.right = _rect.right + 4;
+            if (_subImages[subImageId].wdib == 0xffff)
+            {
+                rectToDraw.left = rectToDraw.left + 4;
+                rectToDraw.right = rectToDraw.right + 4;
+            }
+                
+            break;
+        }
+        case 4601:
+            _rect.bottom = _rect.bottom - 1;
+            break;
+        default:
+            break;
+    }
 
 	if (drawSubImage) {
 		uint16 imageToDraw = _subImages[subImageId].wdib;
 
 		// This special case means redraw background
 		if (imageToDraw == 0xFFFF)
-			imageToDraw = _vm->getCard()->getBackgroundImageId();
+        {
+            imageToDraw = _vm->getCard()->getBackgroundImageId();
+        }
 
-		_vm->_gfx->copyImageSectionToBackBuffer(imageToDraw, _subImages[subImageId].rect, _rect);
+		_vm->_gfx->copyImageSectionToBackBuffer(imageToDraw, rectToDraw, _rect);
 	}
 }
 
@@ -442,10 +645,31 @@ void MystAreaImageSwitch::drawConditionalDataToScreen(uint16 state, bool update)
 		} else
 			warning("Image Switch Var %d: %d exceeds number of subImages %d", _imageSwitchVar, state, _subImages.size());
 	}
-
+    
+    Common::Rect rectToDraw = _subImages[subImageId].rect;
+    switch(_vm->getCard()->getId())
+    {
+        case 4361:
+        case 4368:
+        {
+            if (_subImages[subImageId].wdib == 0xffff)
+            {
+                rectToDraw.left = rectToDraw.left + 4;
+                rectToDraw.right = rectToDraw.right + 4;
+            }
+                
+            break;
+        }
+        case 4601:
+            //_rect.bottom = _rect.bottom - 1;
+            break;
+        default:
+            break;
+    }
 
 	if (drawSubImage) {
 		uint16 imageToDraw = _subImages[subImageId].wdib;
+        
 
 		// This special case means redraw background
 		if (imageToDraw == 0xFFFF)
@@ -453,9 +677,21 @@ void MystAreaImageSwitch::drawConditionalDataToScreen(uint16 state, bool update)
 
 		// Draw to screen
 		if (update) {
-			_vm->_gfx->copyImageSectionToScreen(imageToDraw, _subImages[subImageId].rect, _rect);
+            switch(imageToDraw)
+            {
+                case 6016:
+                case 6017:
+                {
+                    _vm->_gfx->copyImageSectionToBackBuffer(imageToDraw, _subImages[subImageId].rect, _rect);
+                    _vm->_gfx->runTransition(kTransitionDissolve, _rect, 20, 0);
+                    return;
+                }
+                default:
+                    break;
+            }
+			_vm->_gfx->copyImageSectionToScreen(imageToDraw, rectToDraw, _rect);
 		} else {
-			_vm->_gfx->copyImageSectionToBackBuffer(imageToDraw, _subImages[subImageId].rect, _rect);
+			_vm->_gfx->copyImageSectionToBackBuffer(imageToDraw, rectToDraw, _rect);
 		}
 	}
 }
@@ -625,8 +861,8 @@ void MystAreaSlider::updatePosition(const Common::Point &mouse) {
 
 		if (positionChanged) {
 			_rect.bottom = _rect.top + _sliderHeight;
-			_subImages[0].rect.top = 333 - _rect.bottom - 1;
-			_subImages[0].rect.bottom = 333 - _rect.top - 1;
+			_subImages[0].rect.top = 332 - _rect.bottom;
+			_subImages[0].rect.bottom = 332 - _rect.top;
 		}
 	}
 
